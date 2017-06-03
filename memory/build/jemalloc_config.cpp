@@ -29,10 +29,10 @@
 #ifdef DEBUG
 #define MOZ_MALLOC_BUILD_OPTIONS ",junk:true"
 #else
-#define MOZ_MALLOC_BUILD_OPTIONS ",junk:true"
+#define MOZ_MALLOC_BUILD_OPTIONS ",junk:free"
 #endif
 
-#define MOZ_MALLOC_OPTIONS "narenas:1,tcache:false,redzone:true,abort:true"
+#define MOZ_MALLOC_OPTIONS "narenas:1,tcache:false"
 MFBT_DATA const char* je_(malloc_conf) =
   MOZ_MALLOC_OPTIONS MOZ_MALLOC_BUILD_OPTIONS;
 
