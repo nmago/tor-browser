@@ -217,6 +217,7 @@ static void AppendStackTracesToEventFile(const string& aStackTraces)
   delete f;
 }
 
+//TODO: dont write event files (now it's leaved for testing purposes)
 static void WriteSubmissionEvent(SubmissionResult result,
                                  const string& remoteId)
 {
@@ -397,24 +398,18 @@ static bool AddSubmittedReport(const string& serverResponse)
 
 void DeleteDump()
 {
-  const char* noDelete = getenv("MOZ_CRASHREPORTER_NO_DELETE_DUMP");
-  if (!noDelete || *noDelete == '\0') {
     if (!gReporterDumpFile.empty())
       UIDeleteFile(gReporterDumpFile);
     if (!gExtraFile.empty())
       UIDeleteFile(gExtraFile);
     if (!gMemoryFile.empty())
       UIDeleteFile(gMemoryFile);
-  }
 }
 
 void SendCompleted(bool success, const string& serverResponse)
 {
   if (success) {
-    if (AddSubmittedReport(serverResponse)) {
-      DeleteDump();
-    }
-    else {
+    if (!AddSubmittedReport(serverResponse)) {
       string directory = gReporterDumpFile;
       int slashpos = directory.find_last_of("/\\");
       if (slashpos < 2)
@@ -426,12 +421,13 @@ void SendCompleted(bool success, const string& serverResponse)
   } else {
     WriteSubmissionEvent(Failed, "");
   }
+  DeleteDump();
 }
 
 bool ShouldEnableSending()
 {
-  srand(time(0));
-  return ((rand() % 100) < MOZ_CRASHREPORTER_ENABLE_PERCENT);
+  //keep "send report" checkbox always false by default
+  return false;
 }
 
 } // namespace CrashReporter

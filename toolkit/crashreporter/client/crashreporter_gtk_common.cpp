@@ -202,10 +202,10 @@ gpointer SendThread(gpointer args)
      &response_code,
      &error);
   if (success) {
-    LogMessage("Crash report submitted successfully");
+    LogMessage("Crash report submitted successfully2");
   }
   else {
-    LogMessage("Crash report submission failed: " + error);
+    LogMessage("Crash report submission failed2: " + error);
   }
 
   SendCompleted(success, response);
