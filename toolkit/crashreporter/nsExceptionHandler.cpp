@@ -188,7 +188,7 @@ static xpstring *defaultMemoryReportPath = nullptr;
 static char const * const kCrashEventAnnotations[] = {
   "AsyncShutdownTimeout",
   "BuildID",
-  "ProductID",
+  //"ProductID",
   "ProductName",
   "ReleaseChannel",
   "SecondsSinceLastCrash",
@@ -210,6 +210,16 @@ static char const * const kCrashEventAnnotations[] = {
   // "TotalVirtualMemory"
   // "MozCrashReason"
 };
+
+//a blacklist of crash annotations that we dont want to keep in report
+static const char* privSensFields[] = {
+  "InstallTime",
+  "ProductID",
+  //"ProductName", Crash Reporter does'nt work if we delete this field
+  "useragent_locale",
+  "TelemetryEnvironment",
+};
+
 
 static const char kCrashMainID[] = "crash.main.2\n";
 
@@ -2144,6 +2154,17 @@ IsInWhitelist(const nsACString& key)
   return false;
 }
 
+static bool
+IsInBlacklist(const nsACString& key)
+{
+  for (size_t i = 0; i < ArrayLength(privSensFields); ++i) {
+    if (key.EqualsASCII(privSensFields[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // This function is miscompiled with MSVC 2005/2008 when PGO is on.
 #ifdef _MSC_VER
 #pragma optimize("", off)
@@ -2229,6 +2250,7 @@ private:
 
 nsresult AnnotateCrashReport(const nsACString& key, const nsACString& data)
 {
+  if(IsInBlacklist(key) && !data.EqualsASCII("")) return NS_OK;
   if (!GetEnabled())
     return NS_ERROR_NOT_INITIALIZED;
 
@@ -3085,6 +3107,7 @@ WriteExtraData(nsIFile* extraFile,
                bool writeCrashTime=false,
                bool truncate=false)
 {
+
   PRFileDesc* fd;
   int truncOrAppend = truncate ? PR_TRUNCATE : PR_APPEND;
   nsresult rv =
