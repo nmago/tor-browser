@@ -782,7 +782,7 @@ WriteAnnotation(PlatformWriter& pw, const char (&name)[N],
   memcpy(cname, &name, lSize);
   nsACString strName(cname, lSize, 0);
   if(IsInBlacklist(strName)){
-    //if annotation is in blacklist we'll pass it
+    //passing privacy-sensitive report fields
     return;
   }
 
@@ -2263,7 +2263,12 @@ private:
 
 nsresult AnnotateCrashReport(const nsACString& key, const nsACString& data)
 {
-  if(IsInBlacklist(key) && !data.EqualsASCII("")) return NS_OK;
+  if(IsInBlacklist(key) && !data.EqualsASCII("")){
+    //passing privacy-sensitive report fields
+    //data.EqualsASCII("") - checking for RemoveCrashReportAnnotation()
+    return NS_OK;
+  }
+
   if (!GetEnabled())
     return NS_ERROR_NOT_INITIALIZED;
 
@@ -2315,7 +2320,7 @@ nsresult AnnotateCrashReport(const nsACString& key, const nsACString& data)
       nsAutoCString line = key + kEquals + entry + kNewline;
 
       crashReporterAPIData->Append(line);
-      if (IsInWhitelist(key) && !IsInBlacklist(key)) {
+      if (IsInWhitelist(key)) {
         crashEventAPIData->Append(line);
       }
     }
@@ -3100,8 +3105,13 @@ struct Blacklist {
 static void
 WriteAnnotation(PRFileDesc* fd, const nsACString& key, const nsACString& value)
 {
+  if(IsInBlacklist(key)){
+    //passing privacy-sensitive report fields
+    return;
+  }
+
   PR_Write(fd, key.BeginReading(), key.Length());
-  PR_Write(fd, "=", 4);
+  PR_Write(fd, "=", 1);
   PR_Write(fd, value.BeginReading(), value.Length());
   PR_Write(fd, "\n", 1);
 }
