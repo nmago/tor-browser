@@ -215,9 +215,10 @@ static char const * const kCrashEventAnnotations[] = {
 static const char* privSensFields[] = {
   "InstallTime",
   "ProductID",
-  //"ProductName", Crash Reporter does'nt work if we delete this field
+  //"ProductName", Crash Reporter doesn't work if we set this field here
   "useragent_locale",
   "TelemetryEnvironment",
+  "CrashTime"
 };
 
 
@@ -742,6 +743,17 @@ private:
 #error "Need implementation of PlatformWrite for this platform"
 #endif
 
+static bool
+IsInBlacklist(const nsACString& key)
+{
+  for (size_t i = 0; i < ArrayLength(privSensFields); ++i) {
+    if (key.EqualsASCII(privSensFields[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
 template<int N>
 void
 WriteLiteral(PlatformWriter& pw, const char (&str)[N])
@@ -764,11 +776,23 @@ template<int N>
 static void
 WriteAnnotation(PlatformWriter& pw, const char (&name)[N],
                 const char* value) {
+  //name length without line terminator
+  const unsigned int lSize = N - 1;
+  char* cname = new char[lSize];
+  memcpy(cname, &name, lSize);
+  nsACString strName(cname, lSize, 0);
+  if(IsInBlacklist(strName)){
+    //if annotation is in blacklist we'll pass it
+    return;
+  }
+
   WriteLiteral(pw, name);
   WriteLiteral(pw, "=");
   WriteString(pw, value);
   WriteLiteral(pw, "\n");
 };
+
+
 
 /**
  * If minidump_id is null, we assume that dump_path contains the full
@@ -2154,17 +2178,6 @@ IsInWhitelist(const nsACString& key)
   return false;
 }
 
-static bool
-IsInBlacklist(const nsACString& key)
-{
-  for (size_t i = 0; i < ArrayLength(privSensFields); ++i) {
-    if (key.EqualsASCII(privSensFields[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-
 // This function is miscompiled with MSVC 2005/2008 when PGO is on.
 #ifdef _MSC_VER
 #pragma optimize("", off)
@@ -2302,7 +2315,7 @@ nsresult AnnotateCrashReport(const nsACString& key, const nsACString& data)
       nsAutoCString line = key + kEquals + entry + kNewline;
 
       crashReporterAPIData->Append(line);
-      if (IsInWhitelist(key)) {
+      if (IsInWhitelist(key) && !IsInBlacklist(key)) {
         crashEventAPIData->Append(line);
       }
     }
@@ -3088,7 +3101,7 @@ static void
 WriteAnnotation(PRFileDesc* fd, const nsACString& key, const nsACString& value)
 {
   PR_Write(fd, key.BeginReading(), key.Length());
-  PR_Write(fd, "=", 1);
+  PR_Write(fd, "=", 4);
   PR_Write(fd, value.BeginReading(), value.Length());
   PR_Write(fd, "\n", 1);
 }
