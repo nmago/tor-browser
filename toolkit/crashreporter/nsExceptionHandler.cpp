@@ -211,14 +211,28 @@ static char const * const kCrashEventAnnotations[] = {
   // "MozCrashReason"
 };
 
-//a blacklist of crash annotations that we dont want to keep in report
-static const char* privSensFields[] = {
-  "InstallTime",
+//an allowed list of crash report annotations that we will send only
+static const char* allowedReportFields[] = {
   "ProductID",
-  //"ProductName", Crash Reporter doesn't work if we set this field here
-  "useragent_locale",
-  "TelemetryEnvironment",
-  "CrashTime"
+  "ProductName", //Crash Reporter doesn't work if we unset this field here
+  "E10SCohort",
+  "Add-ons",
+  "ContentSandboxCapabilities",
+  "StartupTime",
+  "Notes",
+  "Version",
+  "SecondsSinceLastCrash",
+  "BuildID",
+  "EventLoopNestingLevel",
+  "Vendor",
+  "SafeMode",
+  "FramePoisonBase",
+  "Theme",
+  "FramePoisonSize",
+  "AddonsShouldHaveBlockedE10s",
+  "UptimeTS",
+  "ReleaseChannel",
+  "URL"
 };
 
 
@@ -744,10 +758,10 @@ private:
 #endif
 
 static bool
-IsInBlacklist(const nsACString& key)
+IsAllowedReportField(const nsACString& key)
 {
-  for (size_t i = 0; i < ArrayLength(privSensFields); ++i) {
-    if (key.EqualsASCII(privSensFields[i])) {
+  for (size_t i = 0; i < ArrayLength(allowedReportFields); ++i) {
+    if (key.EqualsASCII(allowedReportFields[i])) {
       return true;
     }
   }
@@ -781,7 +795,7 @@ WriteAnnotation(PlatformWriter& pw, const char (&name)[N],
   char* cname = new char[lSize];
   memcpy(cname, &name, lSize);
   nsACString strName(cname, lSize, 0);
-  if(IsInBlacklist(strName)){
+  if(!IsAllowedReportField(strName)){
     //passing privacy-sensitive report fields
     return;
   }
@@ -2263,7 +2277,7 @@ private:
 
 nsresult AnnotateCrashReport(const nsACString& key, const nsACString& data)
 {
-  if(IsInBlacklist(key) && !data.EqualsASCII("")){
+  if(!IsAllowedReportField(key) && !data.EqualsASCII("")){
     //passing privacy-sensitive report fields
     //data.EqualsASCII("") - checking for RemoveCrashReportAnnotation()
     return NS_OK;
@@ -3105,7 +3119,7 @@ struct Blacklist {
 static void
 WriteAnnotation(PRFileDesc* fd, const nsACString& key, const nsACString& value)
 {
-  if(IsInBlacklist(key)){
+  if(!IsAllowedReportField(key)){
     //passing privacy-sensitive report fields
     return;
   }
