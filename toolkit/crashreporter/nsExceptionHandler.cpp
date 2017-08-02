@@ -214,7 +214,6 @@ static char const * const kCrashEventAnnotations[] = {
 //an allowed list of crash report annotations that we will send only
 static const char* allowedReportFields[] = {
   "ProductID",
-  "ProductName", //Crash Reporter doesn't work if we unset this field here
   "E10SCohort",
   "Add-ons",
   "ContentSandboxCapabilities",
@@ -232,7 +231,10 @@ static const char* allowedReportFields[] = {
   "AddonsShouldHaveBlockedE10s",
   "UptimeTS",
   "ReleaseChannel",
-  "URL"
+  "URL",
+  //Crash Reporter client will not start after crash if we remove following fields:
+  "ServerURL",
+  "ProductName"
 };
 
 

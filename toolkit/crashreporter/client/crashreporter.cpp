@@ -217,7 +217,7 @@ static void AppendStackTracesToEventFile(const string& aStackTraces)
   delete f;
 }
 
-//TODO: dont write event files (now it's leaved for testing purposes)
+//This function is never called
 static void WriteSubmissionEvent(SubmissionResult result,
                                  const string& remoteId)
 {
@@ -331,6 +331,7 @@ static bool MoveCrashData(const string& toDir,
   return true;
 }
 
+//This function is never called
 static bool AddSubmittedReport(const string& serverResponse)
 {
   StringTable responseItems;
@@ -392,7 +393,6 @@ static bool AddSubmittedReport(const string& serverResponse)
   file->close();
   delete file;
 
-  WriteSubmissionEvent(Succeeded, responseItems["CrashID"]);
   return true;
 }
 
@@ -408,19 +408,7 @@ void DeleteDump()
 
 void SendCompleted(bool success, const string& serverResponse)
 {
-  if (success) {
-    if (!AddSubmittedReport(serverResponse)) {
-      string directory = gReporterDumpFile;
-      int slashpos = directory.find_last_of("/\\");
-      if (slashpos < 2)
-        return;
-      directory.resize(slashpos);
-      UIPruneSavedDumps(directory);
-      WriteSubmissionEvent(Failed, "");
-    }
-  } else {
-    WriteSubmissionEvent(Failed, "");
-  }
+  //TODO: Try to resend crashreport if success is false
   DeleteDump();
 }
 
