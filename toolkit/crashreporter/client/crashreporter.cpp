@@ -217,6 +217,7 @@ static void AppendStackTracesToEventFile(const string& aStackTraces)
   delete f;
 }
 
+//This function is never called
 static void WriteSubmissionEvent(SubmissionResult result,
                                  const string& remoteId)
 {
@@ -330,6 +331,7 @@ static bool MoveCrashData(const string& toDir,
   return true;
 }
 
+//This function is never called
 static bool AddSubmittedReport(const string& serverResponse)
 {
   StringTable responseItems;
@@ -391,41 +393,23 @@ static bool AddSubmittedReport(const string& serverResponse)
   file->close();
   delete file;
 
-  WriteSubmissionEvent(Succeeded, responseItems["CrashID"]);
   return true;
 }
 
 void DeleteDump()
 {
-  const char* noDelete = getenv("MOZ_CRASHREPORTER_NO_DELETE_DUMP");
-  if (!noDelete || *noDelete == '\0') {
     if (!gReporterDumpFile.empty())
       UIDeleteFile(gReporterDumpFile);
     if (!gExtraFile.empty())
       UIDeleteFile(gExtraFile);
     if (!gMemoryFile.empty())
       UIDeleteFile(gMemoryFile);
-  }
 }
 
 void SendCompleted(bool success, const string& serverResponse)
 {
-  if (success) {
-    if (AddSubmittedReport(serverResponse)) {
-      DeleteDump();
-    }
-    else {
-      string directory = gReporterDumpFile;
-      int slashpos = directory.find_last_of("/\\");
-      if (slashpos < 2)
-        return;
-      directory.resize(slashpos);
-      UIPruneSavedDumps(directory);
-      WriteSubmissionEvent(Failed, "");
-    }
-  } else {
-    WriteSubmissionEvent(Failed, "");
-  }
+  //TODO: Try to resend crashreport if success is false
+  DeleteDump();
 }
 
 bool ShouldEnableSending()
