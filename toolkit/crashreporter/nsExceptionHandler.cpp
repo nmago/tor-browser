@@ -211,6 +211,34 @@ static char const * const kCrashEventAnnotations[] = {
   // "MozCrashReason"
 };
 
+//an allowed list of crash report annotations that we will send only
+static const char* allowedReportFields[] = {
+  //TODO: these fields should be up to date according to wiki page - https://trac.torproject.org/projects/tor/wiki/doc/crashreporter
+  "ProductID",
+  "E10SCohort",
+  "Add-ons",
+  "ContentSandboxCapabilities",
+  "StartupTime",
+  "Notes",
+  "Version",
+  "SecondsSinceLastCrash",
+  "BuildID",
+  "EventLoopNestingLevel",
+  "Vendor",
+  "SafeMode",
+  "FramePoisonBase",
+  "Theme",
+  "FramePoisonSize",
+  "AddonsShouldHaveBlockedE10s",
+  "UptimeTS",
+  "ReleaseChannel",
+  "URL",
+  //Crash Reporter client will not start after crash if we remove following fields:
+  "ServerURL",
+  "ProductName"
+};
+
+
 static const char kCrashMainID[] = "crash.main.2\n";
 
 static google_breakpad::ExceptionHandler* gExceptionHandler = nullptr;
@@ -732,6 +760,17 @@ private:
 #error "Need implementation of PlatformWrite for this platform"
 #endif
 
+static bool
+IsAllowedReportField(const nsACString& key)
+{
+  for (size_t i = 0; i < ArrayLength(allowedReportFields); ++i) {
+    if (key.EqualsASCII(allowedReportFields[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
 template<int N>
 void
 WriteLiteral(PlatformWriter& pw, const char (&str)[N])
@@ -754,6 +793,18 @@ template<int N>
 static void
 WriteAnnotation(PlatformWriter& pw, const char (&name)[N],
                 const char* value) {
+  //name length without line terminator
+  const unsigned int lSize = N - 1;
+  char* cname = new char[lSize];
+  memcpy(cname, &name, lSize);
+  nsACString strName(cname, lSize, 0);
+  if(!IsAllowedReportField(strName)){
+    delete cname;
+    //passing privacy-sensitive report fields
+    return;
+  }
+  delete cname;
+
   WriteLiteral(pw, name);
   WriteLiteral(pw, "=");
   WriteString(pw, value);
@@ -2229,6 +2280,12 @@ private:
 
 nsresult AnnotateCrashReport(const nsACString& key, const nsACString& data)
 {
+  if(!IsAllowedReportField(key) && !data.EqualsASCII("")){
+    //passing privacy-sensitive report fields
+    //data.EqualsASCII("") - checking for RemoveCrashReportAnnotation()
+    return NS_OK;
+  }
+
   if (!GetEnabled())
     return NS_ERROR_NOT_INITIALIZED;
 
@@ -3065,6 +3122,11 @@ struct Blacklist {
 static void
 WriteAnnotation(PRFileDesc* fd, const nsACString& key, const nsACString& value)
 {
+  if(!IsAllowedReportField(key)){
+    //passing privacy-sensitive report fields
+    return;
+  }
+
   PR_Write(fd, key.BeginReading(), key.Length());
   PR_Write(fd, "=", 1);
   PR_Write(fd, value.BeginReading(), value.Length());
